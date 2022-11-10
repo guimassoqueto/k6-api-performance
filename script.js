@@ -1,8 +1,8 @@
 import http from "k6/http";
 import { check, group } from "k6";
-import { Rate, Counter, Gauge } from "k6/metrics";
+import { Rate, Counter, Gauge, Trend } from "k6/metrics";
 
-import { INVOICES_API_GET, INVOICES_API_POST } from "./urls.js";
+import { INVOICES_API_POST } from "./urls.js";
 import invoicesPostBody from "./helpers/invoicesPostBody.js";
 
 /*
@@ -14,11 +14,12 @@ export const options = {
 const errorRate = new Rate('errorRate');
 const errorCount = new Counter('errorCount');
 const responseTimeGauge = new Gauge('responseTimeGauge');
+const responseTimeTrend = new Trend('responseTimeTrend', true);
 
 export const options = {
   stages: [
     { duration: '10s', target: 10 },
-    //{ duration: '10s', target: 100 },
+    { duration: '10s', target: 100 },
     //{ duration: '20s', target: 1000 },
   ],
   thresholds: {
@@ -28,7 +29,8 @@ export const options = {
     errorCount: [
       'count < 100',
     ],
-    responseTimeGauge: ['value<80']
+    responseTimeGauge: ['value<80'],
+    responseTimeTrend: ['p(95)<80']
   },
 }
 
@@ -40,7 +42,7 @@ export default function () {
         errorRate.add(res.status != 201); // quantos %s das requests são erros
         if (!status_checked) errorCount.add(1); // quantos erros ocorreram
         responseTimeGauge.add(res.timings.duration); // duraçao media da response
-        
+        responseTimeTrend.add(res.timings.duration);
     });
 }
 
